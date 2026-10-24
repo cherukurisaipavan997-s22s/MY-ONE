@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090d1b">
+<title>Whisper — A Secret Message</title>
+<style>
+:root{color-scheme:dark;--bg:#090d1b;--panel:#131a2de8;--line:#35405d;--text:#f5f3ff;--muted:#b8bfd7;--pink:#f0a9d0;--lav:#d9b7f5}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 20% 0%,#263968 0%,transparent 48%),radial-gradient(ellipse at 90% 30%,#351c49 0%,transparent 38%),var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{width:100%;max-width:520px;margin:auto}
+.brand{text-align:center;margin-bottom:22px}
+.heart{color:var(--pink);font-size:30px;text-shadow:0 0 22px #f0a9d088}
+h1{font-size:clamp(34px,8vw,44px);letter-spacing:3px;margin:0 0 4px}
+p{color:var(--muted);margin:8px 0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:clamp(18px,5vw,28px);box-shadow:0 18px 70px #0005;backdrop-filter:blur(12px)}
+h2{font-size:21px;margin:0 0 6px}
+label{display:block;text-align:left;color:#e6e8f5;font-size:14px;margin:16px 0 6px}
+textarea,input,select,button{width:100%;border-radius:13px;font:inherit}
+textarea,input,select{background:#0c1222;color:white;border:1px solid #3a4562;padding:14px;outline:none}
+textarea{min-height:155px;resize:vertical}
+textarea:focus,input:focus,select:focus{border-color:#c5a2f2;box-shadow:0 0 0 3px #c5a2f222}
+button{border:0;padding:14px;margin-top:13px;background:linear-gradient(100deg,#d9b7f5,#f0a9d0);color:#20152d;font-weight:750;cursor:pointer;transition:transform .15s,opacity .15s}
+button:hover{transform:translateY(-1px)}
+button:disabled{opacity:.55;cursor:wait;transform:none}
+button.secondary{background:#202944;color:#f5f3ff;border:1px solid #3a4562}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.small{font-size:13px}
+.notice{padding:12px 14px;border-radius:12px;background:#10182a;border:1px solid #303c59;text-align:left;font-size:13px;color:#c6cce0;margin-top:15px}
+.status{min-height:24px;margin-top:12px;font-size:14px}
+.hidden{display:none!important}
+#words{white-space:pre-wrap;text-align:left;line-height:1.85;overflow-wrap:anywhere;background:#0c1222;border:1px solid #303c59;border-radius:14px;padding:17px;margin-top:12px}
+.footer{text-align:center;font-size:12px;color:#8e98b8;margin-top:18px}
+a{color:#d9b7f5}
+@media(max-width:390px){body{padding:14px}.row{grid-template-columns:1fr}.panel{border-radius:19px}}
+</style>
+</head>
+<body>
+<main>
+  <header class="brand">
+    <div class="heart" aria-hidden="true">♥</div>
+    <h1>Whisper</h1>
+    <p>A secret place for the things left unsaid.</p>
+  </header>
+
+  <section id="create" class="panel">
+    <h2>Write from your heart 💌</h2>
+    <p class="small">Your words are encrypted in this browser before a link is created.</p>
+    <label for="message">Your secret message</label>
+    <textarea id="message" maxlength="12000" placeholder="Write what you've always wanted to say..."></textarea>
+    <label for="sender">Your name (optional)</label>
+    <input id="sender" maxlength="80" placeholder="From someone who cares">
+    <label for="recipient">Their name (optional)</label>
+    <input id="recipient" maxlength="80" placeholder="To someone special">
+    <label for="newpass">Secret password (at least 10 characters recommended)</label>
+    <input id="newpass" type="password" minlength="8" autocomplete="new-password" placeholder="Create a password">
+    <label for="expiry">Link expiry</label>
+    <select id="expiry">
+      <option value="1">1 day</option>
+      <option value="3">3 days</option>
+      <option value="7" selected>7 days</option>
+      <option value="30">30 days</option>
+      <option value="never">No expiry (not recommended)</option>
+    </select>
+    <button id="make">Lock my feelings ♥</button>
+    <div id="result" class="hidden">
+      <div class="notice"><strong>Your secret link is ready.</strong><br>Send the password separately, ideally through another app. Expiry is checked when this page is opened; because this version stores the encrypted letter in the link, it cannot remotely revoke a link that someone has already saved.</div>
+      <label for="sharelink">Encrypted message link</label>
+      <input id="sharelink" readonly>
+      <div class="row">
+        <button id="copy">Copy secret link</button>
+        <button id="test" class="secondary">Preview link</button>
+      </div>
+      <p id="expiryInfo" class="small"></p>
+    </div>
+    <p id="createStatus" class="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section id="unlock" class="panel hidden">
+    <h2>A message was left for you 💌</h2>
+    <p id="greeting">Enter the secret password to reveal it.</p>
+    <label for="pass">Secret password</label>
+    <input id="pass" type="password" autocomplete="current-password" placeholder="Enter the password">
+    <button id="open">Reveal my message</button>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <article id="letter" class="hidden">
+      <p>Someone wanted you to know…</p>
+      <div id="words"></div>
+      <button id="hide" class="secondary">Hide this message</button>
+    </article>
+    <div id="expired" class="notice hidden">This secret message has expired. Ask the sender to create a new one.</div>
+  </section>
+  <p class="footer">Made with care · Whisper keeps the secret in the link, not on a server.</p>
+</main>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const enc = new TextEncoder(), dec = new TextDecoder();
+function to64(bytes){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function from64(s){s=s.replace(/-/g,"+").replace(/_/g,"/");s+="=".repeat((4-s.length%4)%4);return Uint8Array.from(atob(s),c=>c.charCodeAt(0))}
+async function derive(password,salt){
+ const material=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveKey"]);
+ return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:310000,hash:"SHA-256"},material,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+}
+function packPayload(obj){return enc.encode(JSON.stringify(obj))}
+function getPayload(){
+ const raw=new URLSearchParams(location.hash.slice(1)).get("m");
+ if(!raw)return null;
+ return JSON.parse(dec.decode(from64(raw)));
+}
+let payload=null;
+try{payload=getPayload()}catch(e){payload=null}
+if(location.hash.includes("m=")){
+ $("create").classList.add("hidden");$("unlock").classList.remove("hidden");
+ if(!payload || !payload.data){$("status").textContent="This link doesn't look valid."; $("open").disabled=true}
+ else {
+   if(payload.to) $("greeting").textContent="A little note for "+payload.to+". Enter the secret password to reveal it.";
+   if(payload.exp && Date.now()>payload.exp){$("expired").classList.remove("hidden");$("pass").disabled=true;$("open").disabled=true}
+ }
+}
+$("make").addEventListener("click",async()=>{
+ const message=$("message").value, password=$("newpass").value;
+ if(!message.trim()){ $("createStatus").textContent="Write a message first.";return}
+ if(password.length<8){$("createStatus").textContent="Choose a password of at least 8 characters.";return}
+ if(!window.crypto?.subtle){$("createStatus").textContent="Secure encryption needs a modern browser and HTTPS (or localhost).";return}
+ $("make").disabled=true;$("createStatus").textContent="Encrypting your message…";
+ try{
+  const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await derive(password,salt);
+  const meta={v:1,from:$("sender").value.trim(),to:$("recipient").value.trim(),created:Date.now(),exp:$("expiry").value==="never"?0:Date.now()+Number($("expiry").value)*86400000};
+  const plain=packPayload({message,from:meta.from,to:meta.to,created:meta.created});
+  const cipher=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},key,plain));
+  const packed=new Uint8Array(1+salt.length+iv.length+cipher.length);
+  packed[0]=1;packed.set(salt,1);packed.set(iv,17);packed.set(cipher,29);
+  const linkPayload={v:1,exp:meta.exp,to:meta.to,data:to64(packed)};
+  const link=location.href.split("#")[0]+"#m="+to64(packPayload(linkPayload));
+  $("sharelink").value=link;$("result").classList.remove("hidden");
+  $("expiryInfo").textContent=meta.exp?"Expires "+new Date(meta.exp).toLocaleString():"This link has no expiry.";
+  $("createStatus").textContent="Your message is locked. ♥";
+ }catch(e){$("createStatus").textContent="Encryption failed. Use a modern browser on HTTPS or localhost."}
+ finally{$("make").disabled=false}
+});
+$("copy").addEventListener("click",async()=>{
+ try{await navigator.clipboard.writeText($("sharelink").value);$("copy").textContent="Link copied ✓"}
+ catch{$("sharelink").focus();$("sharelink").select();$("createStatus").textContent="The link is selected. Copy it manually."}
+});
+$("test").addEventListener("click",()=>window.open($("sharelink").value,"_blank","noopener"));
+$("open").addEventListener("click",async()=>{
+ $("status").textContent="";$("letter").classList.add("hidden");
+ try{
+  const outer=getPayload();
+  if(!outer||!outer.data)throw Error("bad link");
+  if(outer.exp&&Date.now()>outer.exp){$("expired").classList.remove("hidden");$("open").disabled=true;return}
+  const data=from64(outer.data);
+  if(data.length<46||data[0]!==1)throw Error("bad payload");
+  const salt=data.slice(1,17),iv=data.slice(17,29),cipher=data.slice(29);
+  const key=await derive($("pass").value,salt);
+  const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv},key,cipher);
+  const msg=JSON.parse(dec.decode(plain));
+  $("words").textContent=(msg.from?"From: "+msg.from+"\n\n":"")+msg.message;
+  $("letter").classList.remove("hidden");$("status").textContent="Message unlocked ♥";
+ }catch(e){$("status").textContent="That password didn't unlock the message. Check it and try again."}
+});
+$("hide").addEventListener("click",()=>{$("letter").classList.add("hidden");$("words").textContent="";$("pass").value="";$("status").textContent="Message hidden on this screen."});
+</script>
+</body>
+</html>
